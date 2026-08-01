@@ -1,28 +1,58 @@
 version: 2
+
+# Grouping policy
+# ---------------
+# Each ecosystem groups its minor + patch updates into ONE pull request.
+# Ungrouped, a monthly run opened ~16 PRs on this repo and none were merged,
+# which is how the queue reached a point where genuine fixes were invisible.
+#
+# React is the concrete case this guards against: dependabot raised `react` and
+# `react-dom` as two separate PRs, so each one on its own produced an ERESOLVE
+# peer conflict against the other's pinned version and neither could go green.
+# The `react` group below keeps them in a single PR so they move together.
+#
+# Major bumps stay ungrouped — they carry breaking changes and deserve an
+# individual PR that can be judged (or closed) on its own.
 updates:
   # Python backend dependencies
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
       - "backend"
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      python-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # JavaScript frontend dependencies
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
       - "frontend"
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      # Keep the React runtime pair together at ANY update level, majors
+      # included — bumping one without the other is always a broken build.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # Dockerfiles
   - package-ecosystem: "docker"
@@ -31,19 +61,28 @@ updates:
       - "/frontend"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 2
     labels:
       - "dependencies"
       - "docker"
     commit-message:
       prefix: "chore(docker)"
+    groups:
+      docker-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 2
     labels:
       - "dependencies"
       - "ci"
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      actions-all:
+        patterns: ["*"]
